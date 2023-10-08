@@ -1,0 +1,20 @@
+{
+	"name": "4_create_bronze_tables",
+	"properties": {
+		"folder": {
+			"name": "ldw"
+		},
+		"content": {
+			"query": "USE nyc_taxi_ldw;\n\n-- Create taxi_zone table\nIF OBJECT_ID('bronze.taxi_zone') IS NOT NULL\n    DROP EXTERNAL TABLE bronze.taxi_zone;\n\nCREATE EXTERNAL TABLE bronze.taxi_zone\n    (   location_id SMALLINT ,\n        borough VARCHAR(15) ,\n        zone VARCHAR(50) ,\n        service_zone VARCHAR(15) )  \n    WITH (\n            LOCATION = 'raw/taxi_zone.csv',  \n            DATA_SOURCE = nyc_taxi_src,  \n            FILE_FORMAT = csv_file_format_pv1,\n            REJECT_VALUE = 10,\n            REJECTED_ROW_LOCATION = 'rejections/taxi_zone'\n    );\n\nSELECT * FROM bronze.taxi_zone;\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "nyc_taxi_ldw",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
