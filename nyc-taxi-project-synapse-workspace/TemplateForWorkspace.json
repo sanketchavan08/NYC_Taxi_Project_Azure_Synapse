@@ -94,6 +94,75 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/check_for_duplicates')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "discovery"
+				},
+				"content": {
+					"query": "USE nyc_taxi_discovery;\n\n-- Check for duplicates in the Taxi Zone data\n\nSELECT\n    location_id,\n    COUNT(1) AS number_of_records\nFROM\n    OPENROWSET(\n        BULK 'abfss://nyc-taxi-data@synapsecoursedl.dfs.core.windows.net/raw/taxi_zone.csv',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        FIRSTROW = 2,\n        FIELDTERMINATOR = ',',\n        ROWTERMINATOR = '\\n'\n    ) \n    WITH (\n        location_id SMALLINT 1,\n        borough VARCHAR(15) 2,\n        zone VARCHAR(50) 3,\n        service_zone VARCHAR(15) 4\n    )AS [result]\nGROUP BY location_id\nHAVING COUNT(1) > 1;\n\n\nSELECT\n    borough,\n    COUNT(1) AS number_of_records\nFROM\n    OPENROWSET(\n        BULK 'abfss://nyc-taxi-data@synapsecoursedl.dfs.core.windows.net/raw/taxi_zone.csv',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        FIRSTROW = 2,\n        FIELDTERMINATOR = ',',\n        ROWTERMINATOR = '\\n'\n    ) \n    WITH (\n        location_id SMALLINT 1,\n        borough VARCHAR(15) 2,\n        zone VARCHAR(50) 3,\n        service_zone VARCHAR(15) 4\n    )AS [result]\nGROUP BY borough\nHAVING COUNT(1) > 1;",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "master",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/data_quality_checks')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "discovery"
+				},
+				"content": {
+					"query": "USE nyc_taxi_discovery;\n\n-- Identify any data quality issues in trip total amount\n\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/year=2020/month=01/',\n        FORMAT = 'PARQUET',\n        DATA_SOURCE = 'nyc_taxi_data_raw'\n    ) AS [result]    \n  \nSELECT\n    MIN(total_amount) AS min_total_amount,\n    MAX(total_amount) AS max_total_amount,\n    AVG (total_amount) AS avg_total_amount,\n    COUNT(1) AS total_number_of_records,\n    COUNT(total_amount) AS not_null_total_number_of_records\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/year=2020/month=01/',\n        FORMAT = 'PARQUET',\n        DATA_SOURCE = 'nyc_taxi_data_raw'\n    ) AS [result]  \n\nSELECT\n    payment_type, COUNT(1) AS number_of_records\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/**',\n        FORMAT = 'PARQUET',\n        DATA_SOURCE = 'nyc_taxi_data_raw'\n    ) AS [result] \n-- WHERE total_amount < 0 \nGROUP BY payment_type\nORDER BY payment_type;\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "nyc_taxi_discovery",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/discovery_assignment')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "discovery"
+				},
+				"content": {
+					"query": "USE nyc_taxi_discovery;\n\n/* Identify the percentage of cash and credit card trips by borough\nExample Data As below\n----------------------------------------------------------------------------------------------\nborough\t    total_trips\tcash_trips\tcard_trips\tcash_trips_percentage\tcard_trips_percentage\n----------------------------------------------------------------------------------------------\nBronx\t    2019\t    751\t        1268\t    37.20\t                62.80\nBrooklyn\t6435\t    2192\t    4243\t    34.06\t                65.94\n----------------------------------------------------------------------------------------------\n*/\n\n\nWITH v_payment_type AS\n(\n    SELECT CAST(JSON_VALUE(jsonDoc, '$.payment_type') AS SMALLINT) payment_type,\n            CAST(JSON_VALUE(jsonDoc, '$.payment_type_desc') AS VARCHAR(15)) payment_type_desc\n    FROM OPENROWSET(\n        BULK 'payment_type.json',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '1.0', \n        FIELDTERMINATOR = '0x0b',\n        FIELDQUOTE = '0x0b',\n        ROWTERMINATOR = '0x0a'\n    )\n    WITH\n    (\n        jsonDoc NVARCHAR(MAX)\n    ) AS payment_type\n),\nv_taxi_zone AS\n(\n    SELECT\n        *\n    FROM\n        OPENROWSET(\n            BULK 'taxi_zone.csv',\n            DATA_SOURCE = 'nyc_taxi_data_raw',\n            FORMAT = 'CSV',\n\t\t\tPARSER_VERSION = '2.0',\n            FIRSTROW = 2,\n            FIELDTERMINATOR = ',',\n            ROWTERMINATOR = '\\n'\n        ) \n        WITH (\n            location_id SMALLINT 1,\n            borough VARCHAR(15) 2,\n            zone VARCHAR(50) 3,\n            service_zone VARCHAR(15) 4\n        )AS [result]\n),\nv_trip_data AS\n(\n    SELECT\n        *\n    FROM\n        OPENROWSET(\n            BULK 'trip_data_green_parquet/**',\n            FORMAT = 'PARQUET',\n            DATA_SOURCE = 'nyc_taxi_data_raw'\n        ) AS [result]\n)\nSELECT \n       v_taxi_zone.borough, \n       COUNT(1) AS total_trips,\n       SUM(CASE WHEN v_payment_type.payment_type_desc = 'Cash' THEN 1 ELSE 0 END) AS cash_trips,\n       SUM(CASE WHEN v_payment_type.payment_type_desc = 'Credit card' THEN 1 ELSE 0 END) AS card_trips,\n       CAST((SUM(CASE WHEN v_payment_type.payment_type_desc = 'Cash' THEN 1 ELSE 0 END)/ CAST(COUNT(1) AS DECIMAL)) * 100 AS DECIMAL(5, 2)) AS cash_trips_percentage,\n       CAST((SUM(CASE WHEN v_payment_type.payment_type_desc = 'Credit card' THEN 1 ELSE 0 END)/ CAST(COUNT(1) AS DECIMAL)) * 100 AS DECIMAL(5, 2)) AS card_trips_percentage\n  FROM v_trip_data \n  LEFT JOIN v_payment_type ON (v_trip_data.payment_type = v_payment_type.payment_type)\n  LEFT JOIN v_taxi_zone    ON (v_trip_data.PULocationId = v_taxi_zone.location_id)\nWHERE v_payment_type.payment_type_desc IN ('Cash', 'Credit card')\nGROUP BY v_taxi_zone.borough\nORDER BY total_trips;",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "nyc_taxi_discovery",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/explore_calendar')]",
 			"type": "Microsoft.Synapse/workspaces/sqlscripts",
 			"apiVersion": "2019-06-01-preview",
@@ -287,6 +356,52 @@
 				},
 				"content": {
 					"query": "USE nyc_taxi_discovery;\n\nSELECT *\n  FROM OPENROWSET(\n      BULK 'vendor_unquoted.csv',\n      DATA_SOURCE = 'nyc_taxi_data_raw',\n      FORMAT = 'CSV',\n      PARSER_VERSION = '2.0',\n      HEADER_ROW = TRUE\n  ) AS vendor;\n\n\nSELECT *\n  FROM OPENROWSET(\n      BULK 'vendor_escaped.csv',\n      DATA_SOURCE = 'nyc_taxi_data_raw',\n      FORMAT = 'CSV',\n      PARSER_VERSION = '2.0',\n      HEADER_ROW = TRUE,\n      ESCAPECHAR = '\\\\'\n  ) AS vendor;\n\nSELECT *\n  FROM OPENROWSET(\n      BULK 'vendor.csv',\n      DATA_SOURCE = 'nyc_taxi_data_raw',\n      FORMAT = 'CSV',\n      PARSER_VERSION = '2.0',\n      HEADER_ROW = TRUE,\n      FIELDQUOTE = '\"'\n  ) AS vendor;\n\n\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "nyc_taxi_discovery",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/join_data')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "discovery"
+				},
+				"content": {
+					"query": "USE nyc_taxi_discovery;\n\n-- Identify number of trips made from each borough! \n\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/year=2020/month=01/',\n        FORMAT = 'PARQUET',\n        DATA_SOURCE = 'nyc_taxi_data_raw'\n    ) AS [result]\nWHERE PULocationID IS NULL\n\nSELECT taxi_zone.borough, COUNT(1) AS number_of_trips\n  FROM OPENROWSET(\n                    BULK 'trip_data_green_parquet/year=2020/month=01/',\n                    FORMAT = 'PARQUET',\n                    DATA_SOURCE = 'nyc_taxi_data_raw'\n                ) AS trip_data\n        JOIN\n        OPENROWSET(\n                    BULK 'taxi_zone.csv',\n                    DATA_SOURCE = 'nyc_taxi_data_raw',\n                    FORMAT = 'CSV',\n                    PARSER_VERSION = '2.0',\n                    FIRSTROW = 2\n                ) \n                WITH (\n                    location_id SMALLINT 1,\n                    borough VARCHAR(15) 2,\n                    zone VARCHAR(50) 3,\n                    service_zone VARCHAR(15) 4\n                )AS taxi_zone\n        ON trip_data.PULocationID = taxi_zone.location_id\nGROUP BY taxi_zone.borough\nORDER BY number_of_trips DESC;\n\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "nyc_taxi_discovery",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/simple_transformation')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "discovery"
+				},
+				"content": {
+					"query": "USE nyc_taxi_discovery;\n\n-- Number of trips made by duration in hours\n\nSELECT \n    DATEDIFF(minute, lpep_pickup_datetime, lpep_dropoff_datetime) / 60 AS from_hour,\n    (DATEDIFF(minute, lpep_pickup_datetime, lpep_dropoff_datetime) / 60) + 1 AS to_hour,\n    COUNT(1) AS number_of_trips\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/**',\n        FORMAT = 'PARQUET',\n        DATA_SOURCE = 'nyc_taxi_data_raw'\n    ) AS trip_data\nGROUP BY DATEDIFF(minute, lpep_pickup_datetime, lpep_dropoff_datetime) / 60,\n(DATEDIFF(minute, lpep_pickup_datetime, lpep_dropoff_datetime) / 60) + 1\nORDER BY from_hour, to_hour ;",
 					"metadata": {
 						"language": "sql"
 					},
