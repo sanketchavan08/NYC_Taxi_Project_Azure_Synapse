@@ -1,6 +1,9 @@
 {
 	"name": "join_data",
 	"properties": {
+		"folder": {
+			"name": "discovery"
+		},
 		"content": {
 			"query": "USE nyc_taxi_discovery;\n\n-- Identify number of trips made from each borough! \n\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/year=2020/month=01/',\n        FORMAT = 'PARQUET',\n        DATA_SOURCE = 'nyc_taxi_data_raw'\n    ) AS [result]\nWHERE PULocationID IS NULL\n\nSELECT taxi_zone.borough, COUNT(1) AS number_of_trips\n  FROM OPENROWSET(\n                    BULK 'trip_data_green_parquet/year=2020/month=01/',\n                    FORMAT = 'PARQUET',\n                    DATA_SOURCE = 'nyc_taxi_data_raw'\n                ) AS trip_data\n        JOIN\n        OPENROWSET(\n                    BULK 'taxi_zone.csv',\n                    DATA_SOURCE = 'nyc_taxi_data_raw',\n                    FORMAT = 'CSV',\n                    PARSER_VERSION = '2.0',\n                    FIRSTROW = 2\n                ) \n                WITH (\n                    location_id SMALLINT 1,\n                    borough VARCHAR(15) 2,\n                    zone VARCHAR(50) 3,\n                    service_zone VARCHAR(15) 4\n                )AS taxi_zone\n        ON trip_data.PULocationID = taxi_zone.location_id\nGROUP BY taxi_zone.borough\nORDER BY number_of_trips DESC;\n\n",
 			"metadata": {
