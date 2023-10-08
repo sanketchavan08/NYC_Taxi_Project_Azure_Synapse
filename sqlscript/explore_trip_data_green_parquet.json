@@ -1,0 +1,17 @@
+{
+	"name": "explore_trip_data_green_parquet",
+	"properties": {
+		"content": {
+			"query": "USE nyc_taxi_discovery;\n\n-- This is auto-generated code\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/year=2020/month=01/',\n        FORMAT = 'PARQUET',\n        DATA_SOURCE = 'nyc_taxi_data_raw'\n    ) AS [result]\n\n-- Identify the interred data types\nEXEC sp_describe_first_result_set N'\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK ''trip_data_green_parquet/year=2020/month=01/'',\n        FORMAT = ''PARQUET'',\n        DATA_SOURCE = ''nyc_taxi_data_raw''\n    ) AS [result]'\n\n-- Define Columns and data types\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/year=2020/month=01/',\n        FORMAT = 'PARQUET',\n        DATA_SOURCE = 'nyc_taxi_data_raw'\n    )  \n    WITH (\n      VendorID INT,\n        lpep_pickup_datetime datetime2(7),\n        lpep_dropoff_datetime datetime2(7),\n        store_and_fwd_flag CHAR(1),\n        RatecodeID INT,\n        PULocationID INT,\n        DOLocationID INT,\n        passenger_count INT,\n        trip_distance FLOAT,\n        fare_amount FLOAT,\n        extra FLOAT,\n        mta_tax FLOAT,\n        tip_amount FLOAT,\n        tolls_amount FLOAT,\n        ehail_fee INT,\n        improvement_surcharge FLOAT,\n        total_amount FLOAT,\n        payment_type INT,\n        trip_type INT,\n        congestion_surcharge FLOAT\n  ) AS [result]\n\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/year=2020/month=01/',\n        FORMAT = 'PARQUET',\n        DATA_SOURCE = 'nyc_taxi_data_raw'\n    )  \n    WITH (\n        tip_amount FLOAT,\n        trip_type INT\n  ) AS [result]\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "nyc_taxi_discovery",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
