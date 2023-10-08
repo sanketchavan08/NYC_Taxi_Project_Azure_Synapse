@@ -186,6 +186,29 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/explore_trip_data_green_csv')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "discovery"
+				},
+				"content": {
+					"query": "USE nyc_taxi_discovery;\n\n-- This is auto-generated code\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=2020/month=01/green_tripdata_2020-01.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS [result]\n\n-- Select data from a folder\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=2020/month=01/*.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV', PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS [result]\n-- Select data from subfolders\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=2020/**',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV', PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS [result]\n\n-- Get data from more than one file\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK ('trip_data_green_csv/year=2020/month=01/*.csv',\n        'trip_data_green_csv/year=2020/month=03/*.csv'),\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV', PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS [result]\n\n-- Use more than 1 wildcard character\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=*/month=*/*.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV', PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS [result]\n\n-- File metadata function filename()\nSELECT\n    TOP 100 \n    result.filename() AS file_name,\n    result.*\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=*/month=*/*.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV', PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS [result]\n\n\nSELECT\n    result.filename() AS file_name,\n    COUNT(1) AS record_count\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=*/month=*/*.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV', PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS [result]\nGROUP BY result.filename()\nORDER BY result.filename();\n\n-- Limit Data using filename()\nSELECT\n    result.filename() AS file_name,\n    COUNT(1) AS record_count\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=*/month=*/*.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV', PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS [result]\nWHERE result.filename() IN ('green_tripdata_2020-01.csv', 'green_tripdata_2021-01.csv')\nGROUP BY result.filename()\nORDER BY result.filename();\n\n-- Use filepath function\nSELECT\n    result.filepath(1) AS year,\n    result.filepath(2) AS month,\n    COUNT(1) AS record_count\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=*/month=*/*.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV', PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS [result]\nGROUP BY result.filename(), result.filepath(1), result.filepath(2)\nORDER BY result.filename(), result.filepath(1), result.filepath(2);\n\n-- Use file path in the where clause\nSELECT\n    result.filepath(1) AS year,\n    result.filepath(2) AS month,\n    COUNT(1) AS record_count\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=*/month=*/*.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV', PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS [result]\n--WHERE result.filepath(1) = '2020'\n--  AND result.filepath(2) IN ('06', '07', '08')\nGROUP BY result.filename(), result.filepath(1), result.filepath(2)\nORDER BY result.filename(), result.filepath(1), result.filepath(2);\n\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "nyc_taxi_discovery",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/explore_trip_type')]",
 			"type": "Microsoft.Synapse/workspaces/sqlscripts",
 			"apiVersion": "2019-06-01-preview",
@@ -218,6 +241,26 @@
 				},
 				"content": {
 					"query": "USE nyc_taxi_discovery;\n\nSELECT *\n  FROM OPENROWSET(\n      BULK 'vendor_unquoted.csv',\n      DATA_SOURCE = 'nyc_taxi_data_raw',\n      FORMAT = 'CSV',\n      PARSER_VERSION = '2.0',\n      HEADER_ROW = TRUE\n  ) AS vendor;\n\n\nSELECT *\n  FROM OPENROWSET(\n      BULK 'vendor_escaped.csv',\n      DATA_SOURCE = 'nyc_taxi_data_raw',\n      FORMAT = 'CSV',\n      PARSER_VERSION = '2.0',\n      HEADER_ROW = TRUE,\n      ESCAPECHAR = '\\\\'\n  ) AS vendor;\n\nSELECT *\n  FROM OPENROWSET(\n      BULK 'vendor.csv',\n      DATA_SOURCE = 'nyc_taxi_data_raw',\n      FORMAT = 'CSV',\n      PARSER_VERSION = '2.0',\n      HEADER_ROW = TRUE,\n      FIELDQUOTE = '\"'\n  ) AS vendor;\n\n\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "nyc_taxi_discovery",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/explore_trip_data_green_parquet')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "USE nyc_taxi_discovery;\n\n-- This is auto-generated code\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/year=2020/month=01/',\n        FORMAT = 'PARQUET',\n        DATA_SOURCE = 'nyc_taxi_data_raw'\n    ) AS [result]\n\n-- Identify the interred data types\nEXEC sp_describe_first_result_set N'\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK ''trip_data_green_parquet/year=2020/month=01/'',\n        FORMAT = ''PARQUET'',\n        DATA_SOURCE = ''nyc_taxi_data_raw''\n    ) AS [result]'\n\n-- Define Columns and data types\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/year=2020/month=01/',\n        FORMAT = 'PARQUET',\n        DATA_SOURCE = 'nyc_taxi_data_raw'\n    )  \n    WITH (\n      VendorID INT,\n        lpep_pickup_datetime datetime2(7),\n        lpep_dropoff_datetime datetime2(7),\n        store_and_fwd_flag CHAR(1),\n        RatecodeID INT,\n        PULocationID INT,\n        DOLocationID INT,\n        passenger_count INT,\n        trip_distance FLOAT,\n        fare_amount FLOAT,\n        extra FLOAT,\n        mta_tax FLOAT,\n        tip_amount FLOAT,\n        tolls_amount FLOAT,\n        ehail_fee INT,\n        improvement_surcharge FLOAT,\n        total_amount FLOAT,\n        payment_type INT,\n        trip_type INT,\n        congestion_surcharge FLOAT\n  ) AS [result]\n\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_parquet/year=2020/month=01/',\n        FORMAT = 'PARQUET',\n        DATA_SOURCE = 'nyc_taxi_data_raw'\n    )  \n    WITH (\n        tip_amount FLOAT,\n        trip_type INT\n  ) AS [result]\n",
 					"metadata": {
 						"language": "sql"
 					},
