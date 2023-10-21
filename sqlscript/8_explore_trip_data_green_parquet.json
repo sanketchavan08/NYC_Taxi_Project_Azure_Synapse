@@ -1,5 +1,5 @@
 {
-	"name": "explore_trip_data_green_parquet",
+	"name": "8_explore_trip_data_green_parquet",
 	"properties": {
 		"folder": {
 			"name": "discovery"

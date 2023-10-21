@@ -1,5 +1,5 @@
 {
-	"name": "check_for_duplicates",
+	"name": "10_check_for_duplicates",
 	"properties": {
 		"folder": {
 			"name": "discovery"

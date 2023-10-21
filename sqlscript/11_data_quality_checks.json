@@ -1,5 +1,5 @@
 {
-	"name": "data_quality_checks",
+	"name": "11_data_quality_checks",
 	"properties": {
 		"folder": {
 			"name": "discovery"
