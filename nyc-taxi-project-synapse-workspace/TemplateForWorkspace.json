@@ -15,6 +15,10 @@
 		"nyc-taxi-project-synapse-workspace-WorkspaceDefaultStorage_properties_typeProperties_url": {
 			"type": "string",
 			"defaultValue": "https://storageaccountnyctaxi.dfs.core.windows.net"
+		},
+		"LS_SA_NYC_TAXI_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://storageaccountnyctaxi.dfs.core.windows.net/"
 		}
 	},
 	"variables": {
@@ -805,6 +809,25 @@
 				"type": "SqlQuery"
 			},
 			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/LS_SA_NYC_TAXI')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('LS_SA_NYC_TAXI_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
 		}
 	]
 }

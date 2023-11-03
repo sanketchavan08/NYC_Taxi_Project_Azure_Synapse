@@ -10,6 +10,9 @@
 		},
 		"nyc-taxi-project-synapse-workspace-WorkspaceDefaultStorage_properties_typeProperties_url": {
 			"value": "https://storageaccountnyctaxi.dfs.core.windows.net"
+		},
+		"LS_SA_NYC_TAXI_properties_typeProperties_url": {
+			"value": "https://storageaccountnyctaxi.dfs.core.windows.net/"
 		}
 	}
 }
