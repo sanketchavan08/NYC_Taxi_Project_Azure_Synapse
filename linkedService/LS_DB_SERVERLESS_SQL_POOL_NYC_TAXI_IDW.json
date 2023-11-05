@@ -1,0 +1,15 @@
+{
+	"name": "LS_DB_SERVERLESS_SQL_POOL_NYC_TAXI_IDW",
+	"properties": {
+		"description": "This is the linked service pointing to a serverless SQL pool(compute engine) for database \"logical data warehouse\"",
+		"annotations": [],
+		"type": "AzureSqlDW",
+		"typeProperties": {
+			"connectionString": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:nyc-taxi-project-synapse-workspace-ondemand.sql.azuresynapse.net,1433;Initial Catalog=nyc_taxi_ldw"
+		},
+		"connectVia": {
+			"referenceName": "AutoResolveIntegrationRuntime",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}
