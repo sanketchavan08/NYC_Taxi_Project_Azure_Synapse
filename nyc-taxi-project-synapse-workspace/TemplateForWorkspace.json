@@ -12,19 +12,68 @@
 			"metadata": "Secure string for 'connectionString' of 'nyc-taxi-project-synapse-workspace-WorkspaceDefaultSqlServer'",
 			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:nyc-taxi-project-synapse-workspace.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
 		},
-		"nyc-taxi-project-synapse-workspace-WorkspaceDefaultStorage_properties_typeProperties_url": {
-			"type": "string",
-			"defaultValue": "https://storageaccountnyctaxi.dfs.core.windows.net"
+		"LS_DB_SERVERLESS_SQL_POOL_NYC_TAXI_IDW_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'LS_DB_SERVERLESS_SQL_POOL_NYC_TAXI_IDW'",
+			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:nyc-taxi-project-synapse-workspace-ondemand.sql.azuresynapse.net,1433;Initial Catalog=nyc_taxi_ldw"
 		},
 		"LS_SA_NYC_TAXI_properties_typeProperties_url": {
 			"type": "string",
 			"defaultValue": "https://storageaccountnyctaxi.dfs.core.windows.net/"
+		},
+		"nyc-taxi-project-synapse-workspace-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://storageaccountnyctaxi.dfs.core.windows.net"
 		}
 	},
 	"variables": {
 		"workspaceId": "[concat('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
 	},
 	"resources": [
+		{
+			"name": "[concat(parameters('workspaceName'), '/DS_SILVER_TAXI_ZONE')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_SA_NYC_TAXI",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "silver/taxi_zone",
+						"fileSystem": "nyc-green-taxi-data"
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/LS_SA_NYC_TAXI')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/LS_SA_NYC_TAXI')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('LS_SA_NYC_TAXI_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
 		{
 			"name": "[concat(parameters('workspaceName'), '/nyc-taxi-project-synapse-workspace-WorkspaceDefaultSqlServer')]",
 			"type": "Microsoft.Synapse/workspaces/linkedServices",
@@ -811,14 +860,57 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('workspaceName'), '/LS_SA_NYC_TAXI')]",
+			"name": "[concat(parameters('workspaceName'), '/PL_CREATE_SILVER_TAXI_ZONE')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "DELETE_SILVER_TAXI_ZONE",
+						"type": "Delete",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "DS_SILVER_TAXI_ZONE",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"enableLogging": false,
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true,
+								"enablePartitionDiscovery": false
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/DS_SILVER_TAXI_ZONE')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/LS_DB_SERVERLESS_SQL_POOL_NYC_TAXI_IDW')]",
 			"type": "Microsoft.Synapse/workspaces/linkedServices",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
+				"description": "This is the linked service pointing to a serverless SQL pool(compute engine) for database \"logical data warehouse\"",
 				"annotations": [],
-				"type": "AzureBlobFS",
+				"type": "AzureSqlDW",
 				"typeProperties": {
-					"url": "[parameters('LS_SA_NYC_TAXI_properties_typeProperties_url')]"
+					"connectionString": "[parameters('LS_DB_SERVERLESS_SQL_POOL_NYC_TAXI_IDW_connectionString')]"
 				},
 				"connectVia": {
 					"referenceName": "AutoResolveIntegrationRuntime",
@@ -827,31 +919,6 @@
 			},
 			"dependsOn": [
 				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/DS_SILVER_TAXI_ZONE')]",
-			"type": "Microsoft.Synapse/workspaces/datasets",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"linkedServiceName": {
-					"referenceName": "LS_SA_NYC_TAXI",
-					"type": "LinkedServiceReference"
-				},
-				"annotations": [],
-				"type": "Parquet",
-				"typeProperties": {
-					"location": {
-						"type": "AzureBlobFSLocation",
-						"folderPath": "silver/taxi_zone",
-						"fileSystem": "nyc-green-taxi-data"
-					},
-					"compressionCodec": "snappy"
-				},
-				"schema": []
-			},
-			"dependsOn": [
-				"[concat(variables('workspaceId'), '/linkedServices/LS_SA_NYC_TAXI')]"
 			]
 		}
 	]
