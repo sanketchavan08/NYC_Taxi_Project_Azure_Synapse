@@ -4,6 +4,7 @@
 		"activities": [
 			{
 				"name": "DELETE_SILVER_TAXI_ZONE",
+				"description": "this will delete the parquet file in silver/taxi_zone/*.parquet\n\nthis doesn't delete the external table created on top of this file. ",
 				"type": "Delete",
 				"dependsOn": [],
 				"policy": {
@@ -29,7 +30,7 @@
 			},
 			{
 				"name": "CREATE_SILVER_TAXI_ZONE",
-				"description": "CETAS of taxi zone in silver layer",
+				"description": "This will first delete the external table then \ncreate new ext table using CETAS where data will be copied to silver layer",
 				"type": "Script",
 				"dependsOn": [
 					{
