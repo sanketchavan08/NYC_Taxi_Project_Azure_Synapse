@@ -5,11 +5,11 @@
 		"workspaceName": {
 			"value": "nyc-taxi-project-synapse-workspace"
 		},
-		"nyc-taxi-project-synapse-workspace-WorkspaceDefaultSqlServer_connectionString": {
-			"value": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:nyc-taxi-project-synapse-workspace.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
-		},
 		"LS_DB_SERVERLESS_SQL_POOL_NYC_TAXI_IDW_connectionString": {
 			"value": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:nyc-taxi-project-synapse-workspace-ondemand.sql.azuresynapse.net,1433;Initial Catalog=nyc_taxi_ldw"
+		},
+		"nyc-taxi-project-synapse-workspace-WorkspaceDefaultSqlServer_connectionString": {
+			"value": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:nyc-taxi-project-synapse-workspace.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
 		},
 		"LS_SA_NYC_TAXI_properties_typeProperties_url": {
 			"value": "https://storageaccountnyctaxi.dfs.core.windows.net/"

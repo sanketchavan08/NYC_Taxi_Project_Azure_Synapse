@@ -7,15 +7,15 @@
 			"metadata": "Workspace name",
 			"defaultValue": "nyc-taxi-project-synapse-workspace"
 		},
-		"nyc-taxi-project-synapse-workspace-WorkspaceDefaultSqlServer_connectionString": {
-			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'nyc-taxi-project-synapse-workspace-WorkspaceDefaultSqlServer'",
-			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:nyc-taxi-project-synapse-workspace.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
-		},
 		"LS_DB_SERVERLESS_SQL_POOL_NYC_TAXI_IDW_connectionString": {
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'LS_DB_SERVERLESS_SQL_POOL_NYC_TAXI_IDW'",
 			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:nyc-taxi-project-synapse-workspace-ondemand.sql.azuresynapse.net,1433;Initial Catalog=nyc_taxi_ldw"
+		},
+		"nyc-taxi-project-synapse-workspace-WorkspaceDefaultSqlServer_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'nyc-taxi-project-synapse-workspace-WorkspaceDefaultSqlServer'",
+			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:nyc-taxi-project-synapse-workspace.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
 		},
 		"LS_SA_NYC_TAXI_properties_typeProperties_url": {
 			"type": "string",
@@ -30,6 +30,88 @@
 		"workspaceId": "[concat('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
 	},
 	"resources": [
+		{
+			"name": "[concat(parameters('workspaceName'), '/PL_CREATE_SILVER_TAXI_ZONE')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "DELETE_SILVER_TAXI_ZONE",
+						"description": "this will delete the parquet file in silver/taxi_zone/*.parquet\n\nthis doesn't delete the external table created on top of this file. ",
+						"type": "Delete",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "DS_SILVER_TAXI_ZONE",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"enableLogging": false,
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true,
+								"enablePartitionDiscovery": false
+							}
+						}
+					},
+					{
+						"name": "CREATE_SILVER_TAXI_ZONE",
+						"description": "This will first delete the external table then \ncreate new ext table using CETAS where data will be copied to silver layer",
+						"type": "Script",
+						"dependsOn": [
+							{
+								"activity": "DELETE_SILVER_TAXI_ZONE",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"linkedServiceName": {
+							"referenceName": "LS_DB_SERVERLESS_SQL_POOL_NYC_TAXI_IDW",
+							"type": "LinkedServiceReference"
+						},
+						"typeProperties": {
+							"scripts": [
+								{
+									"type": "NonQuery",
+									"text": "IF OBJECT_ID('silver.taxi_zone') IS NOT NULL\n    DROP EXTERNAL TABLE silver.taxi_zone\n"
+								},
+								{
+									"type": "Query",
+									"text": "CREATE EXTERNAL TABLE silver.taxi_zone\n    WITH\n    (\n        DATA_SOURCE = nyc_taxi_src,\n        LOCATION = 'silver/taxi_zone',\n        FILE_FORMAT = parquet_file_format\n    )\nAS\nSELECT *\n  FROM bronze.taxi_zone;"
+								}
+							],
+							"scriptBlockExecutionTimeout": "02:00:00"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/DS_SILVER_TAXI_ZONE')]",
+				"[concat(variables('workspaceId'), '/linkedServices/LS_DB_SERVERLESS_SQL_POOL_NYC_TAXI_IDW')]"
+			]
+		},
 		{
 			"name": "[concat(parameters('workspaceName'), '/DS_SILVER_TAXI_ZONE')]",
 			"type": "Microsoft.Synapse/workspaces/datasets",
@@ -53,6 +135,26 @@
 			},
 			"dependsOn": [
 				"[concat(variables('workspaceId'), '/linkedServices/LS_SA_NYC_TAXI')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/LS_DB_SERVERLESS_SQL_POOL_NYC_TAXI_IDW')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "This is the linked service pointing to a serverless SQL pool(compute engine) for database \"logical data warehouse\"",
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('LS_DB_SERVERLESS_SQL_POOL_NYC_TAXI_IDW_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
 			]
 		},
 		{
@@ -858,68 +960,6 @@
 				"type": "SqlQuery"
 			},
 			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/PL_CREATE_SILVER_TAXI_ZONE')]",
-			"type": "Microsoft.Synapse/workspaces/pipelines",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"activities": [
-					{
-						"name": "DELETE_SILVER_TAXI_ZONE",
-						"type": "Delete",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"dataset": {
-								"referenceName": "DS_SILVER_TAXI_ZONE",
-								"type": "DatasetReference",
-								"parameters": {}
-							},
-							"enableLogging": false,
-							"storeSettings": {
-								"type": "AzureBlobFSReadSettings",
-								"recursive": true,
-								"enablePartitionDiscovery": false
-							}
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"annotations": []
-			},
-			"dependsOn": [
-				"[concat(variables('workspaceId'), '/datasets/DS_SILVER_TAXI_ZONE')]"
-			]
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/LS_DB_SERVERLESS_SQL_POOL_NYC_TAXI_IDW')]",
-			"type": "Microsoft.Synapse/workspaces/linkedServices",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"description": "This is the linked service pointing to a serverless SQL pool(compute engine) for database \"logical data warehouse\"",
-				"annotations": [],
-				"type": "AzureSqlDW",
-				"typeProperties": {
-					"connectionString": "[parameters('LS_DB_SERVERLESS_SQL_POOL_NYC_TAXI_IDW_connectionString')]"
-				},
-				"connectVia": {
-					"referenceName": "AutoResolveIntegrationRuntime",
-					"type": "IntegrationRuntimeReference"
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
-			]
 		}
 	]
 }
