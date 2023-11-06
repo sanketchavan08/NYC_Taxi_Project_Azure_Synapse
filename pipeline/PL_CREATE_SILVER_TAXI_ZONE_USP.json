@@ -47,6 +47,9 @@
 					"secureInput": false
 				},
 				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[silver].[usp_silver_taxi_zone]"
+				},
 				"linkedServiceName": {
 					"referenceName": "LS_DB_SERVERLESS_SQL_POOL_NYC_TAXI_IDW",
 					"type": "LinkedServiceReference"
