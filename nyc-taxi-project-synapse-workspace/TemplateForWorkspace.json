@@ -1106,7 +1106,7 @@
 							},
 							"activities": [
 								{
-									"name": "DELETE_SILVER_TAXI_ZONE",
+									"name": "DELETE_SILVER_FOLDER_CONTENT",
 									"description": "this will delete the parquet file in silver/taxi_zone/*.parquet\n\nthis doesn't delete the external table created on top of this file. ",
 									"type": "Delete",
 									"dependsOn": [],
@@ -1138,11 +1138,11 @@
 									}
 								},
 								{
-									"name": "CREATE_SILVER_TAXI_ZONE",
+									"name": "CREATE_SILVER_TABLES",
 									"type": "SqlServerStoredProcedure",
 									"dependsOn": [
 										{
-											"activity": "DELETE_SILVER_TAXI_ZONE",
+											"activity": "DELETE_SILVER_FOLDER_CONTENT",
 											"dependencyConditions": [
 												"Succeeded"
 											]
