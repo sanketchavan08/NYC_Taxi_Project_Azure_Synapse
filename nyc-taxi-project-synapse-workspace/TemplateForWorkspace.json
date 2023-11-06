@@ -1054,6 +1054,128 @@
 				"[concat(variables('workspaceId'), '/datasets/DS_SILVER_TAXI_ZONE')]",
 				"[concat(variables('workspaceId'), '/linkedServices/LS_DB_SERVERLESS_SQL_POOL_NYC_TAXI_IDW')]"
 			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DS_NYC_TAXI_DATA_DYNAMIC')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "LS_SA_NYC_TAXI",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"p_folder_path": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": {
+							"value": "@dataset().p_folder_path",
+							"type": "Expression"
+						},
+						"fileSystem": "nyc-green-taxi-data"
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/LS_SA_NYC_TAXI')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/PL_CREATE_SILVER_TABLES')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "DELETE_SILVER_TAXI_ZONE",
+						"description": "this will delete the parquet file in silver/taxi_zone/*.parquet\n\nthis doesn't delete the external table created on top of this file. ",
+						"type": "Delete",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "DS_NYC_TAXI_DATA_DYNAMIC",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_folder_path": {
+										"value": "@variables('v_folder_path')",
+										"type": "Expression"
+									}
+								}
+							},
+							"enableLogging": false,
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true,
+								"enablePartitionDiscovery": false
+							}
+						}
+					},
+					{
+						"name": "CREATE_SILVER_TAXI_ZONE",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "DELETE_SILVER_TAXI_ZONE",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": {
+								"value": "@variables('v_usp_name')",
+								"type": "Expression"
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "LS_DB_SERVERLESS_SQL_POOL_NYC_TAXI_IDW",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"v_folder_path": {
+						"type": "String",
+						"defaultValue": "silver/taxi_zone"
+					},
+					"v_usp_name": {
+						"type": "String",
+						"defaultValue": "silver.usp_silver_taxi_zone"
+					}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/DS_NYC_TAXI_DATA_DYNAMIC')]",
+				"[concat(variables('workspaceId'), '/linkedServices/LS_DB_SERVERLESS_SQL_POOL_NYC_TAXI_IDW')]"
+			]
 		}
 	]
 }
