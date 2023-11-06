@@ -1,0 +1,80 @@
+{
+	"name": "PL_CREATE_SILVER_TABLES",
+	"properties": {
+		"activities": [
+			{
+				"name": "DELETE_SILVER_TAXI_ZONE",
+				"description": "this will delete the parquet file in silver/taxi_zone/*.parquet\n\nthis doesn't delete the external table created on top of this file. ",
+				"type": "Delete",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "DS_NYC_TAXI_DATA_DYNAMIC",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_folder_path": {
+								"value": "@variables('v_folder_path')",
+								"type": "Expression"
+							}
+						}
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					}
+				}
+			},
+			{
+				"name": "CREATE_SILVER_TAXI_ZONE",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "DELETE_SILVER_TAXI_ZONE",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": {
+						"value": "@variables('v_usp_name')",
+						"type": "Expression"
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_DB_SERVERLESS_SQL_POOL_NYC_TAXI_IDW",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"variables": {
+			"v_folder_path": {
+				"type": "String",
+				"defaultValue": "silver/taxi_zone"
+			},
+			"v_usp_name": {
+				"type": "String",
+				"defaultValue": "silver.usp_silver_taxi_zone"
+			}
+		},
+		"annotations": []
+	}
+}
