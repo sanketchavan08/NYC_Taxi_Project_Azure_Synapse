@@ -5,6 +5,9 @@
 			"referenceName": "LS_SA_NYC_TAXI",
 			"type": "LinkedServiceReference"
 		},
+		"folder": {
+			"name": "demo"
+		},
 		"annotations": [],
 		"type": "Parquet",
 		"typeProperties": {
