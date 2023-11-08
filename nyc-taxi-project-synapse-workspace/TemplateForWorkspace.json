@@ -749,7 +749,7 @@
 						"type": "ExecutePipeline",
 						"dependsOn": [
 							{
-								"activity": "Execute create silver tables",
+								"activity": "Execute create silver trip data green",
 								"dependencyConditions": [
 									"Succeeded"
 								]
@@ -1831,7 +1831,7 @@
 						"spark.dynamicAllocation.enabled": "false",
 						"spark.dynamicAllocation.minExecutors": "2",
 						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "ba1a2ae1-343c-4eda-8643-c782e058fc4e"
+						"spark.autotune.trackingId": "f19b0cf1-a055-4969-a414-3ab9687be7d9"
 					}
 				},
 				"metadata": {
