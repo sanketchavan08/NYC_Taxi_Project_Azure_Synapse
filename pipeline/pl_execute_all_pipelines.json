@@ -33,13 +33,13 @@
 				"type": "ExecutePipeline",
 				"dependsOn": [
 					{
-						"activity": "Execute create silver tables ",
+						"activity": "Execute create silver trip data green",
 						"dependencyConditions": [
 							"Succeeded"
 						]
 					},
 					{
-						"activity": "Execute create silver trip data green",
+						"activity": "Execute create silver tables",
 						"dependencyConditions": [
 							"Succeeded"
 						]
@@ -49,6 +49,26 @@
 				"typeProperties": {
 					"pipeline": {
 						"referenceName": "pl_create_gold_trip_data_green",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "Execute create gold trip data green_agg",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Execute create silver tables",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pl_create_gold_trip_data_green_agg",
 						"type": "PipelineReference"
 					},
 					"waitOnCompletion": true
