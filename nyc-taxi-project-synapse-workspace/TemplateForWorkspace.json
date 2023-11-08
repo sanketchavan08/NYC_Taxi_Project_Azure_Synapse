@@ -726,12 +726,39 @@
 								"dependencyConditions": [
 									"Succeeded"
 								]
+							},
+							{
+								"activity": "Execute create silver tables",
+								"dependencyConditions": [
+									"Succeeded"
+								]
 							}
 						],
 						"userProperties": [],
 						"typeProperties": {
 							"pipeline": {
 								"referenceName": "pl_create_gold_trip_data_green",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "Execute create gold trip data green_agg",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "Execute create silver tables",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pl_create_gold_trip_data_green_agg",
 								"type": "PipelineReference"
 							},
 							"waitOnCompletion": true,
@@ -747,7 +774,8 @@
 			"dependsOn": [
 				"[concat(variables('workspaceId'), '/pipelines/pl_create_silver_tables')]",
 				"[concat(variables('workspaceId'), '/pipelines/pl_create_silver_trip_data_green')]",
-				"[concat(variables('workspaceId'), '/pipelines/pl_create_gold_trip_data_green')]"
+				"[concat(variables('workspaceId'), '/pipelines/pl_create_gold_trip_data_green')]",
+				"[concat(variables('workspaceId'), '/pipelines/pl_create_gold_trip_data_green_agg')]"
 			]
 		},
 		{
@@ -1803,7 +1831,7 @@
 						"spark.dynamicAllocation.enabled": "false",
 						"spark.dynamicAllocation.minExecutors": "2",
 						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "70e9441a-1b51-46ad-8c5d-8589123f071f"
+						"spark.autotune.trackingId": "ba1a2ae1-343c-4eda-8643-c782e058fc4e"
 					}
 				},
 				"metadata": {
