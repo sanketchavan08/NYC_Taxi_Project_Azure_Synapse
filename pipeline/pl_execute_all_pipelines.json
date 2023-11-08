@@ -59,7 +59,7 @@
 				"type": "ExecutePipeline",
 				"dependsOn": [
 					{
-						"activity": "Execute create silver tables",
+						"activity": "Execute create silver trip data green",
 						"dependencyConditions": [
 							"Succeeded"
 						]
