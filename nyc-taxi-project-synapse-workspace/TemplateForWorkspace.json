@@ -371,6 +371,55 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/pl_create_gold_trip_data_green_agg')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "nt_create_gold_trip_data_green_agg",
+						"type": "SynapseNotebook",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebook": {
+								"referenceName": "1_spark_create_gold_trip_data_green_agg",
+								"type": "NotebookReference"
+							},
+							"snapshot": true,
+							"sparkPool": {
+								"referenceName": "nycsparkpool",
+								"type": "BigDataPoolReference"
+							},
+							"executorSize": "Small",
+							"conf": {
+								"spark.dynamicAllocation.enabled": null,
+								"spark.dynamicAllocation.minExecutors": null,
+								"spark.dynamicAllocation.maxExecutors": null
+							},
+							"driverSize": "Small",
+							"numExecutors": null
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/notebooks/1_spark_create_gold_trip_data_green_agg')]",
+				"[concat(variables('workspaceId'), '/bigDataPools/nycsparkpool')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/pl_create_silver_tables')]",
 			"type": "Microsoft.Synapse/workspaces/pipelines",
 			"apiVersion": "2019-06-01-preview",
@@ -1802,15 +1851,6 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('workspaceName'), '/nycsparkpool')]",
-			"type": "Microsoft.Synapse/workspaces/bigDataPools",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"annotations": []
-			},
-			"dependsOn": []
-		},
-		{
 			"name": "[concat(parameters('workspaceName'), '/1_spark_create_gold_trip_data_green_agg')]",
 			"type": "Microsoft.Synapse/workspaces/notebooks",
 			"apiVersion": "2019-06-01-preview",
@@ -1831,7 +1871,7 @@
 						"spark.dynamicAllocation.enabled": "false",
 						"spark.dynamicAllocation.minExecutors": "2",
 						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "f19b0cf1-a055-4969-a414-3ab9687be7d9"
+						"spark.autotune.trackingId": "9ed8cdb6-dc67-4e61-bf35-9035f258883c"
 					}
 				},
 				"metadata": {
@@ -1906,12 +1946,12 @@
 						},
 						"source": [
 							"#Set the folder paths so that it can be used later. \n",
-							"bronze_folder_path = 'abfss://nyc-taxi-data@synapsecoursedl.dfs.core.windows.net/raw'\n",
-							"silver_folder_path = 'abfss://nyc-taxi-data@synapsecoursedl.dfs.core.windows.net/silver'\n",
-							"gold_folder_path = 'abfss://nyc-taxi-data@synapsecoursedl.dfs.core.windows.net/gold'"
+							"bronze_folder_path = 'abfss://nyc-green-taxi-data@storageaccountnyctaxi.dfs.core.windows.net/raw'\n",
+							"silver_folder_path = 'abfss://nyc-green-taxi-data@storageaccountnyctaxi.dfs.core.windows.net/silver'\n",
+							"gold_folder_path = 'abfss://nyc-green-taxi-data@storageaccountnyctaxi.dfs.core.windows.net/gold/'"
 						],
 						"outputs": [],
-						"execution_count": 1
+						"execution_count": 5
 					},
 					{
 						"cell_type": "code",
@@ -1931,7 +1971,7 @@
 							"spark.conf.set(\"spark.sql.sources.partitionColumnTypeInference.enabled\", \"false\")"
 						],
 						"outputs": [],
-						"execution_count": 2
+						"execution_count": 6
 					},
 					{
 						"cell_type": "code",
@@ -1956,10 +1996,10 @@
 							"-- Create database to which we are going to write the data\n",
 							"\n",
 							"CREATE DATABASE IF NOT EXISTS nyc_taxi_ldw_spark\n",
-							"LOCATION 'abfss://nyc-taxi-data@synapsecoursedl.dfs.core.windows.net/gold';"
+							"LOCATION 'abfss://nyc-green-taxi-data@storageaccountnyctaxi.dfs.core.windows.net/gold';"
 						],
 						"outputs": [],
-						"execution_count": 3
+						"execution_count": 7
 					},
 					{
 						"cell_type": "code",
@@ -1979,7 +2019,7 @@
 							"trip_data_green_df = spark.read.parquet(f\"{silver_folder_path}/trip_data_green\") "
 						],
 						"outputs": [],
-						"execution_count": 4
+						"execution_count": null
 					},
 					{
 						"cell_type": "code",
@@ -2006,7 +2046,7 @@
 							"                        round(sum(\"fare_amount\"), 2).alias(\"total_fare_amount\"))"
 						],
 						"outputs": [],
-						"execution_count": 5
+						"execution_count": null
 					},
 					{
 						"cell_type": "code",
@@ -2027,55 +2067,36 @@
 							"trip_data_green_agg_df.write.mode(\"overwrite\").partitionBy(\"year\", \"month\").format(\"parquet\").saveAsTable(\"nyc_taxi_ldw_spark.trip_data_green_agg\")"
 						],
 						"outputs": [],
-						"execution_count": 6
+						"execution_count": null
 					}
 				]
 			},
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('workspaceName'), '/pl_create_gold_trip_data_green_agg')]",
-			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"name": "[concat(parameters('workspaceName'), '/nycsparkpool')]",
+			"type": "Microsoft.Synapse/workspaces/bigDataPools",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
-				"activities": [
-					{
-						"name": "nt_create_gold_trip_data_green_agg",
-						"type": "SynapseNotebook",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"notebook": {
-								"referenceName": "1_spark_create_gold_trip_data_green_agg",
-								"type": "NotebookReference"
-							},
-							"snapshot": true,
-							"sparkPool": {
-								"referenceName": "nycsparkpool",
-								"type": "BigDataPoolReference"
-							},
-							"executorSize": "Small",
-							"conf": {},
-							"driverSize": "Small"
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
+				"autoPause": {
+					"enabled": true,
+					"delayInMinutes": 5
 				},
+				"autoScale": {
+					"enabled": false,
+					"maxNodeCount": 5,
+					"minNodeCount": 3
+				},
+				"nodeCount": 3,
+				"nodeSize": "Small",
+				"nodeSizeFamily": "MemoryOptimized",
+				"sparkVersion": "3.3",
+				"isComputeIsolationEnabled": false,
+				"sessionLevelPackagesEnabled": true,
 				"annotations": []
 			},
-			"dependsOn": [
-				"[concat(variables('workspaceId'), '/notebooks/1_spark_create_gold_trip_data_green_agg')]",
-				"[concat(variables('workspaceId'), '/bigDataPools/nycsparkpool')]"
-			]
+			"dependsOn": [],
+			"location": "eastus"
 		}
 	]
 }
